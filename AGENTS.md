@@ -6,8 +6,9 @@ A personal todo terminal application using TypeScript, Bun, and OpenTUI. This is
 
 Current phase: planning. Do not implement planned features until explicitly requested.
 
-- Separate work and personal todos.
-- Show 5 todos initially, expandable to 10.
+- Separate Work and Personal views, accessed through a horizontal menu.
+- Add a Daily note view to the same menu for adding notes by calendar day.
+- Todo views show 5 todos initially, expandable to 10.
 - Order by when added, newest first.
 - Provide a way to view all todos. The 5/10 limits constrain the view, not stored todos.
 - Future integration: Telegram; possibly Google Calendar through MCP.

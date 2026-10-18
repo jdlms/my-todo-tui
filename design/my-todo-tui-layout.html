@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>my-todo-tui — layout study</title>
+  <style>
+    :root {
+      --paper: #f5f5f5;
+      --ink: #202936;
+      --muted: #576477;
+      --accent: #2667f1;
+      --terminal: #10151e;
+      --terminal-ink: #e5eaf2;
+      --terminal-muted: #9aa8bd;
+      --terminal-rule: #3c485c;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { max-width: 1280px; margin: 0 auto; padding: 48px 40px 32px; }
+    .eyebrow, .status, .note-number { font-family: var(--mono); font-size: 11px; letter-spacing: .09em; text-transform: uppercase; }
+    .eyebrow { margin: 0 0 20px; color: var(--muted); }
+    .heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    h1 { margin: 0; font: 400 clamp(36px, 4vw, 52px)/1.1 Georgia, "Times New Roman", serif; letter-spacing: -.035em; }
+    .status { color: var(--accent); border-left: 2px solid var(--accent); padding: 6px 0 6px 12px; white-space: nowrap; }
+    .intro { margin: 16px 0 32px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+    .preview-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 12px; }
+    .preview-label { color: var(--muted); font-size: 12px; }
+    .view-mode { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; border: 0; }
+    .view-mode legend { float: left; margin-right: 12px; padding: 8px 0; font-size: 12px; color: var(--muted); }
+    .view-mode input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .view-mode label { min-width: 42px; padding: 8px 12px; border: 1px solid #bdc5d0; text-align: center; font: 12px var(--mono); cursor: pointer; }
+    .view-mode label + input + label { border-left: 0; }
+    .view-mode label:last-child { min-width: 52px; border-radius: 0 4px 4px 0; }
+    .view-mode label[for="view-five"] { border-radius: 4px 0 0 4px; }
+    .view-mode input:checked + label { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .view-mode input:focus-visible + label { outline: 2px solid var(--ink); outline-offset: 3px; }
+    .terminal { overflow: hidden; border: 1px solid var(--terminal-rule); border-radius: 8px; background: var(--terminal); color: var(--terminal-ink); font: 13px/1.5 var(--mono); }
+    .window-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 20px; background: #191f2b; color: var(--terminal-muted); border-bottom: 1px solid #2b3545; font-size: 11px; }
+    .window-path { color: #d5deec; }
+    .terminal-body { padding: 24px; }
+    .app-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 24px; }
+    .app-name { font-size: 15px; font-weight: 600; }
+    .prompt { color: #85aaff; margin-right: 10px; }
+    .app-subtitle { color: var(--terminal-muted); font-size: 11px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .view-nav { display: flex; gap: 8px; margin: 0 0 24px; padding: 0 0 12px; border: 0; border-bottom: 1px solid #2b3545; }
+    .view-nav input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .view-nav label { padding: 8px 16px; border-bottom: 2px solid transparent; color: var(--terminal-muted); cursor: pointer; white-space: nowrap; }
+    .view-nav label span { margin-right: 10px; font-size: 10px; }
+    .view-nav input:checked + label { color: #e5eaf2; background: #1c3158; border-color: var(--accent); }
+    .view-nav input:focus-visible + label { outline: 2px solid #9bbaff; outline-offset: 2px; }
+    .pane, .daily-view { display: none; }
+    .study:has(#screen-work:checked) .work-view, .study:has(#screen-personal:checked) .personal-view, .study:has(#screen-daily:checked) .daily-view { display: block; }
+    .personal-only, .daily-only, .command-bar.daily-only { display: none; }
+    .study:has(#screen-personal:checked) .work-only { display: none; }
+    .study:has(#screen-personal:checked) .personal-only { display: inline; }
+    .study:has(#screen-daily:checked) .todo-only { display: none; }
+    .study:has(#screen-daily:checked) .daily-only { display: flex; }
+    .study:has(#screen-daily:checked) .view-mode { visibility: hidden; }
+    .pane { min-width: 0; margin: 0; padding: 0 0 16px; border: 1px solid var(--terminal-rule); border-radius: 2px; }
+    .pane.active { border-color: var(--accent); }
+    .pane legend { padding: 0 10px; margin-left: 14px; color: #d5deec; font-size: 13px; }
+    .pane.active legend { color: #9bbaff; }
+    .pane legend span { color: var(--terminal-muted); font-size: 11px; margin-left: 8px; }
+    .column-head { display: flex; justify-content: space-between; padding: 18px 20px 10px 40px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--terminal-muted); }
+    .task-list { list-style: none; padding: 0; margin: 0 8px; scrollbar-color: #586985 var(--terminal); scrollbar-width: thin; }
+    .task-list:focus-visible { outline: 2px solid #9bbaff; outline-offset: 2px; }
+    .task { display: grid; grid-template-columns: 12px 24px minmax(0, 1fr) 36px; gap: 4px; align-items: center; min-height: 40px; padding: 8px; }
+    .task.selected { background: #1c3158; }
+    .cursor { color: #9bbaff; }
+    .check { color: var(--terminal-muted); font-size: 12px; }
+    .task-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .age { color: var(--terminal-muted); font-size: 11px; text-align: right; }
+    .pane-footer { display: flex; justify-content: space-between; gap: 12px; padding: 18px 20px 0; font-size: 11px; color: var(--terminal-muted); }
+    .count-ten, .count-all { display: none; }
+    .task:nth-child(n+6) { display: none; }
+    .study:has(#view-ten:checked) .task:nth-child(-n+10), .study:has(#view-all:checked) .task { display: grid; }
+    .study:has(#view-ten:checked) .count-five, .study:has(#view-all:checked) .count-five { display: none; }
+    .study:has(#view-ten:checked) .count-ten, .study:has(#view-all:checked) .count-all { display: inline; }
+    .study:has(#view-all:checked) .task-list { max-height: 400px; overflow-y: auto; }
+    .daily-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .date-control { display: flex; align-items: center; gap: 12px; color: var(--terminal-muted); font-size: 11px; }
+    .date-control input { min-width: 0; padding: 8px 12px; border: 1px solid var(--terminal-rule); border-radius: 2px; background: var(--terminal); color: var(--terminal-ink); color-scheme: dark; font: 12px var(--mono); }
+    .daily-hint { color: var(--terminal-muted); font-size: 11px; }
+    .note-editor { margin: 0; padding: 20px; border: 1px solid var(--accent); border-radius: 2px; }
+    .note-editor legend { padding: 0 10px; color: #9bbaff; }
+    .note-editor textarea { display: block; width: 100%; min-height: 240px; padding: 0; resize: vertical; border: 0; background: transparent; color: var(--terminal-ink); font: 13px/1.9 var(--mono); }
+    .note-editor textarea:focus-visible, .date-control input:focus-visible { outline: 2px solid #9bbaff; outline-offset: 4px; }
+    .note-preview { margin: 16px 0 0; color: var(--terminal-muted); font-size: 11px; }
+    .command-bar { display: flex; flex-wrap: wrap; gap: 12px 20px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #2b3545; color: var(--terminal-muted); font-size: 11px; }
+    .command-bar kbd { color: #e5eaf2; background: none; font: inherit; margin-right: 6px; }
+    .app-status { display: flex; justify-content: space-between; gap: 16px; margin-top: 20px; color: var(--terminal-muted); font-size: 10px; }
+    .preview-caption { display: flex; justify-content: space-between; gap: 24px; margin: 12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .notes { display: grid; grid-template-columns: 1.2fr 1fr; gap: 64px; padding: 32px 0 24px; margin-top: 20px; border-top: 1px solid #d8dce3; }
+    .note-number { display: block; margin-bottom: 8px; color: var(--accent); }
+    .notes h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+    .notes p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; max-width: 52ch; }
+    .page-footer { padding-top: 12px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    @media (max-width: 850px) {
+      main { padding: 28px 20px; }
+      .heading { align-items: flex-start; }
+      .status { font-size: 9px; white-space: normal; }
+      .terminal-body { padding: 20px 16px; }
+      .notes { gap: 24px; }
+      .app-subtitle { font-size: 10px; }
+    }
+    @media (max-width: 520px) {
+      .heading { display: block; }
+      .status { display: inline-block; margin-top: 16px; }
+      .preview-toolbar, .preview-caption { align-items: flex-start; flex-direction: column; gap: 10px; }
+      .app-header { align-items: flex-start; flex-direction: column; gap: 4px; }
+      .window-bar { padding: 10px 16px; }
+      .window-size { display: none; }
+      .notes { grid-template-columns: 1fr; }
+      .app-status { flex-direction: column; gap: 4px; }
+      .view-nav { gap: 4px; }
+      .view-nav label { padding: 8px 10px; font-size: 12px; }
+      .view-nav label span { display: none; }
+      .daily-header { align-items: flex-start; flex-direction: column; gap: 8px; }
+      .note-editor { padding: 16px; }
+    }
+    @media print {
+      main { padding: 16px; }
+      .terminal { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .preview-toolbar { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">my-todo-tui / layout study 02</p>
+      <div class="heading">
+        <h1>Todos &amp; daily notes.</h1>
+        <span class="status">Proposal · not implemented</span>
+      </div>
+      <p class="intro">Separate views for Work, Personal, and Daily note. One horizontal menu.</p>
+    </header>
+
+    <section class="study" aria-label="Todo terminal layout preview">
+      <div class="preview-toolbar">
+        <span class="preview-label">Layout preview · sample data</span>
+        <fieldset class="view-mode">
+          <legend>Rows per list</legend>
+          <input type="radio" name="rows" id="view-five" checked>
+          <label for="view-five">5</label>
+          <input type="radio" name="rows" id="view-ten">
+          <label for="view-ten">10</label>
+          <input type="radio" name="rows" id="view-all">
+          <label for="view-all">All</label>
+        </fieldset>
+      </div>
+
+      <div class="terminal" aria-label="Proposed terminal screen">
+        <div class="window-bar">
+          <span class="window-path">~/my-todo-tui</span>
+          <span class="window-size">terminal / tabbed views</span>
+          <span>layout mockup</span>
+        </div>
+        <div class="terminal-body">
+          <div class="app-header">
+            <span class="app-name"><span class="prompt" aria-hidden="true">&gt;_</span>my-todo</span>
+            <span class="app-subtitle todo-only">Newest added first</span>
+            <span class="app-subtitle daily-only">Notes, grouped by day</span>
+          </div>
+
+          <fieldset class="view-nav">
+            <legend class="sr-only">Choose a view</legend>
+            <input type="radio" name="screen" id="screen-work" checked>
+            <label for="screen-work"><span aria-hidden="true">1</span>Work</label>
+            <input type="radio" name="screen" id="screen-personal">
+            <label for="screen-personal"><span aria-hidden="true">2</span>Personal</label>
+            <input type="radio" name="screen" id="screen-daily">
+            <label for="screen-daily"><span aria-hidden="true">3</span>Daily note</label>
+          </fieldset>
+
+          <div class="screens">
+            <fieldset class="pane work-view active">
+              <legend>Work <span>12 todos</span></legend>
+              <div class="column-head"><span>Todo</span><span>Added</span></div>
+              <ol class="task-list" aria-label="Work todos, newest first" tabindex="0">
+                <li class="task selected" aria-label="Selected: Review Cloud Run rollout, added 2 minutes ago"><span class="cursor" aria-hidden="true">›</span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Review Cloud Run rollout</span><span class="age">2m</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Check deployment logs</span><span class="age">18m</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Review Terraform plan</span><span class="age">43m</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Update the runbook</span><span class="age">1h</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Follow up on access request</span><span class="age">3h</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Check staging alert thresholds</span><span class="age">5h</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Review service account roles</span><span class="age">1d</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Document the release process</span><span class="age">2d</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Investigate slow CI job</span><span class="age">3d</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Check storage costs</span><span class="age">4d</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Review backup restore notes</span><span class="age">5d</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Schedule incident review</span><span class="age">6d</span></li>
+              </ol>
+              <div class="pane-footer">
+                <span><span class="count-five">5 of 12</span><span class="count-ten">10 of 12</span><span class="count-all">All 12 · scroll to browse</span></span>
+                <span>newest first ↓</span>
+              </div>
+            </fieldset>
+
+            <fieldset class="pane personal-view active">
+              <legend>Personal <span>12 todos</span></legend>
+              <div class="column-head"><span>Todo</span><span>Added</span></div>
+              <ol class="task-list" aria-label="Personal todos, newest first" tabindex="0">
+                <li class="task selected" aria-label="Selected: Book dentist appointment, added 8 minutes ago"><span class="cursor" aria-hidden="true">›</span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Book dentist appointment</span><span class="age">8m</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Pick up groceries</span><span class="age">25m</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Call the electrician</span><span class="age">50m</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Plan weekend walk</span><span class="age">2h</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Renew gym membership</span><span class="age">4h</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Sort travel photos</span><span class="age">6h</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Replace bike lights</span><span class="age">1d</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Read the next chapter</span><span class="age">2d</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Organize desk cables</span><span class="age">3d</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Check passport expiry</span><span class="age">4d</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Choose a birthday gift</span><span class="age">5d</span></li>
+                <li class="task"><span></span><span class="check" aria-hidden="true">[ ]</span><span class="task-text">Back up personal files</span><span class="age">7d</span></li>
+              </ol>
+              <div class="pane-footer">
+                <span><span class="count-five">5 of 12</span><span class="count-ten">10 of 12</span><span class="count-all">All 12 · scroll to browse</span></span>
+                <span>newest first ↓</span>
+              </div>
+            </fieldset>
+
+            <section class="daily-view" aria-label="Daily note layout">
+              <div class="daily-header">
+                <label class="date-control" for="note-date">Day <input id="note-date" type="date" value="2026-10-18" aria-describedby="note-preview"></label>
+                <span class="daily-hint">Choose a day · write freely</span>
+              </div>
+              <fieldset class="note-editor">
+                <legend>Daily note</legend>
+                <label class="sr-only" for="daily-note">Notes for the selected day, unsaved layout preview</label>
+                <textarea id="daily-note" aria-describedby="note-preview" spellcheck="true" placeholder="Add notes for this day…">09:15 — Reviewed the rollout. Write up the findings later.
+
+A thought to come back to:
+Keep the daily note simple — somewhere to put things as they happen.
+
+15:30 — Pick this up tomorrow.</textarea>
+              </fieldset>
+              <p class="note-preview" id="note-preview">Preview only. Date and text are editable; changing the date does not load another note. Nothing is saved.</p>
+            </section>
+          </div>
+
+          <div class="command-bar todo-only" aria-label="Proposed todo keyboard controls, illustrative only">
+            <span><kbd>1 / 2 / 3</kbd>switch view</span>
+            <span><kbd>↑ ↓</kbd>select</span>
+            <span><kbd>space</kbd>complete</span>
+            <span><kbd>n</kbd>new</span>
+            <span><kbd>e</kbd>5 / 10</span>
+            <span><kbd>a</kbd>view all</span>
+            <span><kbd>q</kbd>quit</span>
+          </div>
+          <div class="command-bar daily-only" aria-label="Proposed daily note keyboard controls, illustrative only">
+            <span><kbd>1 / 2 / 3</kbd>switch view</span>
+            <span><kbd>d</kbd>choose day</span>
+            <span><kbd>enter</kbd>edit note</span>
+            <span><kbd>esc</kbd>leave editor</span>
+            <span><kbd>q</kbd>quit</span>
+          </div>
+          <div class="app-status">
+            <span class="todo-only"><span class="work-only">Work / Review Cloud Run rollout</span><span class="personal-only">Personal / Book dentist appointment</span></span>
+            <span class="todo-only">Ordered by added time, not priority</span>
+            <span class="daily-only">Daily note / writing area</span>
+            <span class="daily-only">Mockup · notes are not saved</span>
+          </div>
+        </div>
+      </div>
+      <div class="preview-caption">
+        <span>Click Work, Personal, or Daily note to explore. Todo views retain 5 / 10 / All.</span>
+        <span>Keyboard hints are illustrative. Note edits are not saved.</span>
+      </div>
+    </section>
+
+    <section class="notes" aria-label="Layout decisions to review">
+      <div>
+        <span class="note-number">01 / Separate views</span>
+        <h2>One list at a time.</h2>
+        <p>The horizontal menu switches between Work, Personal, and Daily note. Each todo view uses the full width, showing five initially, expandable to ten or all. Newest additions stay first.</p>
+      </div>
+      <div>
+        <span class="note-number">02 / Daily note</span>
+        <h2>A place for each day’s notes.</h2>
+        <p>A date picker and a freeform writing area, separate from your todos. The intended app lets you add notes by day and return to earlier dates. Saving and date navigation are not implemented in this mockup.</p>
+      </div>
+    </section>
+    <footer class="page-footer">Planning artifact only. Telegram, Calendar, persistence, and hosting are deliberately outside this layout. No app code changed. System fonts; no network requests.</footer>
+  </main>
+</body>
+</html>
